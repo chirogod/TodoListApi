@@ -24,7 +24,8 @@ namespace TodoListApi.Controllers
         [HttpGet]
         public async Task<IActionResult> Get(int page, int limit) {
 
-            var items = await _repository.GetAllAsync(page,limit);
+            var UserId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            var items = await _repository.GetAllAsync(UserId, page,limit);
             return Ok(items);
         }
 
