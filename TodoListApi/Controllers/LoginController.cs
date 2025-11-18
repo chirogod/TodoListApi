@@ -7,6 +7,7 @@ using System.Text;
 using TodoListApi.Database.Interface;
 using TodoListApi.DTOs;
 using TodoListApi.Models;
+using TodoListApi.Services.Interfaces;
 
 namespace TodoListApi.Controllers
 {
@@ -16,58 +17,36 @@ namespace TodoListApi.Controllers
     {
         private readonly IConfiguration _config;
         private IUserRepository _userRepository;
-
-        public LoginController(IConfiguration configuration, IUserRepository userRepository)
+        private ITokenService _tokenService;
+        private IHashService _hashService;
+        public LoginController(IConfiguration configuration, IUserRepository userRepository, ITokenService tokenService, IHashService hashService)
         {
             _config = configuration;
             _userRepository = userRepository;
+            _tokenService = tokenService;
+            _hashService = hashService;
         }
 
         [HttpPost]
         public async Task<IActionResult> Login([FromBody] LoginDTO login)
         {
             var user = await _userRepository.GetUserByEmailAsync(login.Email);
-            if (user == null || user.Password != login.Password)
+            if (user == null)
             {
-                return Unauthorized();
+                return Unauthorized("Usuario no encontrado.");
             }
-            var token = GenerateJwtToken(user);
+
+            var pass = _hashService.Verify(user, user.Password, login.Password);
+                        
+            if (!pass)
+            {
+                return Unauthorized("Contrasena incorrecta");
+            }
+            var token = _tokenService.GenerateJwtToken(user);
             return Ok(token);
         }
 
-        private string GenerateJwtToken(User user)
-        {
-            // A. Definir los Claims (información del usuario que viaja en el token)
-            var claims = new List<Claim>
-            {
-                // Sub: Identificador único del usuario (es el claim más importante)
-                new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
-                new Claim(ClaimTypes.Name, user.Name),
-                new Claim(ClaimTypes.Email, user.Email)
-            };
-
-            // B. Obtener la Clave Secreta desde la configuración
-            var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_config["JwtConfig:Key"] ?? throw new InvalidOperationException("JWT Key not configured")));
-
-            // C. Crear las Credenciales (firma)
-            var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
-
-            // D. Crear el Descriptor del Token (quién lo emite, para quién, expiración, etc.)
-            var tokenDescriptor = new SecurityTokenDescriptor
-            {
-                Subject = new ClaimsIdentity(claims),
-                Expires = DateTime.Now.AddDays(7),
-                SigningCredentials = creds,
-                Issuer = _config["JwtConfig:Issuer"],
-                Audience = _config["JwtConfig:Audience"]
-            };
-
-            // E. Crear y Serializar el Token
-            var tokenHandler = new JwtSecurityTokenHandler();
-            var token = tokenHandler.CreateToken(tokenDescriptor);
-
-            return tokenHandler.WriteToken(token); // Devuelve el token como string
-        }
+        
 
         
     }

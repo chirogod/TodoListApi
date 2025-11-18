@@ -12,7 +12,19 @@ namespace TodoListApi.Database.Repositories
         {
             _context = context;
         }
-
+        public async Task<List<TodoItem>> GetAllAsync(int page, int limit)
+        {
+            int offset = (page - 1) * limit;
+            if(page > 0 && limit > 0)
+            {
+                return await _context.TodoItems.Skip(offset).Take(limit).ToListAsync();
+            }
+            else
+            {
+                return await _context.TodoItems.ToListAsync();
+            }
+            
+        }
         public async Task<TodoItem?> GetItemById(int id)
         {
             return await _context.TodoItems.FirstOrDefaultAsync(t=>t.Id == id);

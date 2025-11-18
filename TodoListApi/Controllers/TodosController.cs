@@ -21,6 +21,13 @@ namespace TodoListApi.Controllers
             _repository = repository;
         }
 
+        [HttpGet]
+        public async Task<IActionResult> Get(int page, int limit) {
+
+            List<TodoItem> items = await _repository.GetAllAsync(page,limit);
+            return Ok(items);
+        }
+
         [HttpPost]
         public async Task<IActionResult> AddItem([FromBody] ItemDTO item)
         {
@@ -71,7 +78,7 @@ namespace TodoListApi.Controllers
                 return Forbid();
             }
 
-            _repository.DeleteItem(id);
+            await _repository.DeleteItem(id);
             return NoContent();
         }
 
