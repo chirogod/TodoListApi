@@ -1,6 +1,7 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using System.Threading.Tasks;
 using TodoListApi.Database.Interface;
+using TodoListApi.DTOs;
 using TodoListApi.Models;
 
 namespace TodoListApi.Database.Repositories
@@ -12,18 +13,28 @@ namespace TodoListApi.Database.Repositories
         {
             _context = context;
         }
-        public async Task<List<TodoItem>> GetAllAsync(int page, int limit)
+        public async Task<PaginationDTO<TodoItem>> GetAllAsync(int page, int limit)
         {
+            //establecer valores por defecto si no vienen
+            if (page < 1) page = 1;
+            if (limit < 1) limit = 10;
+
+            //el offset es la cantidad q se saltea antes de empezar a mostrar
             int offset = (page - 1) * limit;
-            if(page > 0 && limit > 0)
+
+            int totalItems = await _context.TodoItems.CountAsync();
+
+            var items = await _context.TodoItems.Skip(offset).Take(limit).ToListAsync();//skipea la cantidad q diga offset y toma la cantidad que dice el limite
+
+            //creamos el objeto para pasar la metadata
+            return new PaginationDTO<TodoItem>()
             {
-                return await _context.TodoItems.Skip(offset).Take(limit).ToListAsync();
-            }
-            else
-            {
-                return await _context.TodoItems.ToListAsync();
-            }
-            
+                Data = items,
+                Page = page,
+                Limit = limit,
+                Total = totalItems
+            };
+
         }
         public async Task<TodoItem?> GetItemById(int id)
         {

@@ -24,7 +24,7 @@ namespace TodoListApi.Controllers
         [HttpGet]
         public async Task<IActionResult> Get(int page, int limit) {
 
-            List<TodoItem> items = await _repository.GetAllAsync(page,limit);
+            var items = await _repository.GetAllAsync(page,limit);
             return Ok(items);
         }
 
